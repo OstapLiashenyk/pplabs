@@ -5,6 +5,7 @@ from marshmallow import Schema, fields, ValidationError, validate
 from flask_bcrypt import Bcrypt
 from models import Users, Rooms, booked_room
 import db
+from auth import auth
 
 user_blueprint = Blueprint('user', __name__, url_prefix='/user')
 room_blueprint = Blueprint('room', __name__, url_prefix='/room')
@@ -61,7 +62,13 @@ def get_user(user_id):
 
 
 @user_blueprint.route('/<int:user_id>', methods=['PUT'])
+@auth.login_required
 def update_user(user_id):
+    user = db.session.query(Users).filter_by(id=user_id).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
+    if user != auth.current_user():
+        return jsonify({'error': 'Forbidden'}), 403
     try:
         class UserToUpdate(Schema):
             username = fields.String()
@@ -81,10 +88,6 @@ def update_user(user_id):
     if len(users) > 0 and users[0].id != user_id:
         return jsonify({"message": "Username is used"}), 400
 
-    user = db.session.query(Users).filter(Users.id == user_id).first()
-
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
 
     try:
         if 'username' in request.json:
@@ -109,10 +112,13 @@ def update_user(user_id):
 
 
 @user_blueprint.route('/<int:user_id>', methods=['DELETE'])
+@auth.login_required
 def delete_user(user_id):
     user = db.session.query(Users).filter_by(id=user_id).first()
     if user is None:
         return jsonify({'error': 'No users'}), 404
+    if user != auth.current_user():
+        return jsonify({'error': 'Forbidden'}), 403
 
     try:
         db.session.delete(user)
@@ -126,17 +132,25 @@ def delete_user(user_id):
 
 
 @user_blueprint.route('/login', methods=['GET'])
+@auth.login_required
 def login():
-    return jsonify("not implemented")
+    return jsonify("Success")
 
 
 @user_blueprint.route('/logout', methods=['GET'])
+@auth.login_required
 def logout():
-    return jsonify("not implemented")
+    return jsonify("Success")
 
 
 @room_blueprint.route('', methods=['POST'])
+@auth.login_required
 def create_room():
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
+    if user.user_status != 1:
+        return jsonify({'error': 'Forbidden'}), 403
     try:
         class RoomToCreate(Schema):
             name = fields.String(required=True)
@@ -173,7 +187,13 @@ def get_room(room_id):
 
 
 @room_blueprint.route('/<int:room_id>', methods=['DELETE'])
+@auth.login_required
 def delete_room(room_id):
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
+    if user.user_status != 1:
+        return jsonify({'error': 'Forbidden'}), 403
     room = db.session.query(Rooms).filter_by(id=room_id).first()
     if room is None:
         return jsonify({'error': 'No rooms'}), 404
@@ -189,7 +209,13 @@ def delete_room(room_id):
 
 
 @room_blueprint.route('/<int:room_id>', methods=['PUT'])
+@auth.login_required
 def update_room(room_id):
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
+    if user.user_status != 1 and user.user_status != 2:
+        return jsonify({'error': 'Forbidden'}), 403
     try:
         class RoomToUpdate(Schema):
             name = fields.String()
@@ -223,7 +249,11 @@ def update_room(room_id):
 
 
 @user_blueprint.route('/book', methods=['POST'])
+@auth.login_required
 def create_book():
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
     try:
         class RoomToBook(Schema):
             room_id = fields.Integer(required=True)
@@ -257,10 +287,14 @@ def create_book():
                                                                                     '%Y-%m-%d %H:%M:%S') < datetime.timedelta(
         hours=1):
         return ({"message": "Time is too short or too big"}), 400
-
-    book = booked_room(room_id=request.json['room_id'], user_id=request.json['user_id'],
-                       num_of_people=request.json['num_of_people'], time_start=request.json['time_start'],
-                       time_end=request.json['time_end'])
+    if user.user_status == 1 or user.user_status == 2:
+        book = booked_room(room_id=request.json['room_id'], user_id=request.json['user_id'],
+                           num_of_people=request.json['num_of_people'], time_start=request.json['time_start'],
+                           time_end=request.json['time_end'])
+    else:
+        book = booked_room(room_id=request.json['room_id'], user_id=user.id,
+                           num_of_people=request.json['num_of_people'], time_start=request.json['time_start'],
+                           time_end=request.json['time_end'])
     try:
         db.session.add(book)
     except:
@@ -271,10 +305,16 @@ def create_book():
 
 
 @user_blueprint.route('/book/<int:book_id>', methods=['GET'])
+@auth.login_required
 def get_book(book_id):
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
     book = db.session.query(booked_room).filter_by(id=book_id).first()
     if book is None:
         return jsonify({'error': 'Book not found'}), 404
+    if user.user_status != 1 and user.user_status != 2 and user.id != book.user_id:
+        return jsonify({'error': 'Forbidden'}), 403
 
     res_json = {'id': book.id,
                 'room_id': book.room_id,
@@ -288,11 +328,16 @@ def get_book(book_id):
 
 
 @user_blueprint.route('/book/<int:book_id>', methods=['DELETE'])
+@auth.login_required
 def delete_book(book_id):
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
     book = db.session.query(booked_room).filter_by(id=book_id).first()
     if book is None:
         return jsonify({'error': 'No books'}), 404
-
+    if user.user_status != 1 and user.user_status != 2 and user.id != book.user_id:
+        return jsonify({'error': 'Forbidden'}), 403
     try:
         db.session.delete(book)
     except:
@@ -305,6 +350,7 @@ def delete_book(book_id):
 
 
 @user_blueprint.route('/book/<int:book_id>', methods=['PUT'])
+@auth.login_required
 def update_book(book_id):
     try:
         class RoomToBook(Schema):
@@ -320,10 +366,14 @@ def update_book(book_id):
     except ValidationError as err:
         return jsonify(err.messages), 400
 
-    book = db.session.query(booked_room).filter(booked_room.id == book_id).first()
-
+    user = db.session.query(Users).filter_by(username=auth.username()).first()
+    if user is None:
+        return jsonify({'error': 'No users'}), 404
+    book = db.session.query(booked_room).filter_by(id=book_id).first()
     if book is None:
         return jsonify({'error': 'No books'}), 404
+    if user.user_status != 1 and user.user_status != 2 and user.id != book.user_id:
+        return jsonify({'error': 'Forbidden'}), 403
 
     try:
         if 'room_id' in request.json:
