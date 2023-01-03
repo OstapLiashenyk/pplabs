@@ -1,7 +1,10 @@
 from flask import Flask
+from rout import user_blueprint, room_blueprint
 
 app = Flask(__name__)
 
+app.register_blueprint(user_blueprint)
+app.register_blueprint(room_blueprint)
 
 STUDENT_ID = 7
 
