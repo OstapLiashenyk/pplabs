@@ -10,6 +10,8 @@ python = "^3.9"
 flask = "^2.2.2"
 sqlalchemy = "^1.4.45"
 psycopg2 = "^2.9.5"
+marshmallow = "^3.19.0"
+flask-bcrypt = "^1.0.1"
 
 
 [build-system]
