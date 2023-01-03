@@ -102,6 +102,21 @@ bcrypt = ">=3.1.1"
 Flask = "*"
 
 [[package]]
+name = "flask-httpauth"
+version = "4.7.0"
+description = "HTTP authentication for Flask routes"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "Flask-HTTPAuth-4.7.0.tar.gz", hash = "sha256:f7199e7bad20d5b68b3f0b62bddfca7637c55087e9d02f605ae26e0de479fd94"},
+    {file = "Flask_HTTPAuth-4.7.0-py3-none-any.whl", hash = "sha256:a237e4c8ec1d339298a0eb88e5af2ca36117949b621631649462800e57e1ba37"},
+]
+
+[package.dependencies]
+flask = "*"
+
+[[package]]
 name = "greenlet"
 version = "2.0.1"
 description = "Lightweight in-process concurrent programming"
@@ -443,4 +458,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "96f3682aed469c1f6348a17f7fca3e457b4acf0bf10fd1118f4e920d30a8b385"
+content-hash = "cf766447d42613660f994c94c853a49fd8bb2b407b35b17f463193fb1d9a3024"
