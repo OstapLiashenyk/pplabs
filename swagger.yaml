@@ -1,0 +1,617 @@
+openapi: 3.0.3
+info:
+  title: Swagger Booking - OpenAPI 3.0
+  description: |-
+    This is an API for Booking application.
+  version: 1.0.0
+tags:
+  - name: user
+    description: Operations about user
+  - name: room
+    description: Operations with rooms
+paths:
+  /user:
+    post:
+      tags:
+        - user
+      summary: Create user
+      description: This can only be done by the logged in user.
+      operationId: createUser
+      requestBody:
+        $ref: '#/components/requestBodies/UserToCreate'
+      responses:
+        default:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /user/login:
+    get:
+      tags:
+        - user
+      summary: Logs user into the system
+      description: ''
+      operationId: loginUser
+      parameters:
+        - name: username
+          in: query
+          description: The user name for login
+          required: false
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid username/password supplied
+        '404':
+          description: User not found
+  /user/logout:
+    get:
+      tags:
+        - user
+      summary: Logs out current logged in user session
+      description: ''
+      operationId: logoutUser
+      parameters: []
+      responses:
+        default:
+          description: successful operation
+  /user/{id}:
+    get:
+      tags:
+        - user
+      summary: Get user by id
+      description: ''
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          description: 'The id that needs to be fetched.'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid id supplied
+        '404':
+          description: User not found
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+    put:
+      tags:
+        - user
+      summary: Update user
+      description: This can only be done by the logged in user.
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          description: id that need to be deleted
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Update an existent user in the database
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                  example: John
+                lastName:
+                  type: string
+                  example: James
+                email:
+                  type: string
+                  example: john@email.com
+                password:
+                  type: string
+                  example: '12345'
+                phone:
+                  type: string
+                  example: '12345'
+                userStatus:
+                  type: integer
+                  description: User Status
+                  format: int32
+                  example: 1
+              xml:
+                name: user
+      responses:
+        default:
+          description: successful operation
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+    delete:
+      tags:
+        - user
+      summary: Delete user
+      description: This can only be done by the logged in user.
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          description: The name that needs to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid username supplied
+        '404':
+          description: User not found
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+
+  /user/book:
+    post:
+      tags:
+        - user
+      summary: Book a room to the database
+      description: Book a room to the database
+      operationId: bookRoom
+      requestBody:
+        $ref: '#/components/requestBodies/RoomToBook'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '405':
+          description: Invalid input
+      security:
+        - booking_auth:
+            - admin
+  /user/book/{id}:
+    get:
+      tags:
+        - user
+      summary: Get booking by id
+      description: ''
+      operationId: getBookingById
+      parameters:
+        - name: id
+          in: path
+          description: 'The id that needs to be fetched.'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid id supplied
+        '404':
+          description: User not found
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+    put:
+      tags:
+        - user
+      summary: Update booking
+      description: This can only be done by the logged in user.
+      operationId: updateBooking
+      parameters:
+        - name: id
+          in: path
+          description: id that need to be deleted
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Update an existent booking in the database
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                room_id:
+                  type: integer
+                  format: int64
+                  example: 2
+                user_id:
+                  type: integer
+                  format: int64
+                  example: 2
+                num_of_people:
+                  type: integer
+                  format: int64
+                  example: 22
+                time_start:
+                  type: string
+                  example: '2022-10-10 13:10:00'
+                time_end:
+                  type: string
+                  example: '2022-10-10 14:10:00'
+              xml:
+                name: booking
+      responses:
+        default:
+          description: successful operation
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+    delete:
+      tags:
+        - user
+      summary: Delete booking
+      description: This can only be done by the logged in user.
+      operationId: deleteBooking
+      parameters:
+        - name: id
+          in: path
+          description: The name that needs to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid id supplied
+        '404':
+          description: Booking not found
+      security:
+        - booking_auth:
+          - admin
+          - manager
+          - customer
+  /room:
+    post:
+      tags:
+        - room
+      summary: Add a new room to the database
+      description: Add a new room to the database
+      operationId: addRoom
+      requestBody:
+        $ref: '#/components/requestBodies/RoomToCreate'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '405':
+          description: Invalid input
+      security:
+        - booking_auth:
+            - admin
+  /room/{roomId}:
+    get:
+      tags:
+        - room
+      summary: Find room by ID
+      description: Returns a single room
+      operationId: getRoomById
+      parameters:
+        - name: roomId
+          in: path
+          description: ID of room to return
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Room not found
+      security:
+        - api_key: []
+        - booking_auth:
+            - admin
+            - manager
+    put:
+      tags:
+        - room
+      summary: Update a room in the database with form data
+      description: ''
+      operationId: updateRoomWithForm
+      parameters:
+        - name: roomId
+          in: path
+          description: ID of room that needs to be updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: name
+          in: query
+          description: Name of room that needs to be updated
+          schema:
+            type: string
+        - name: numOfSeats
+          in: query
+          description: Number of seats in the room that needs to be updated
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - booking_auth:
+            - admin
+    delete:
+      tags:
+        - room
+      summary: Delete a room
+      description: delete a room
+      operationId: deleteRoom
+      parameters:
+        - name: api_key
+          in: header
+          description: ''
+          required: false
+          schema:
+            type: string
+        - name: roomId
+          in: path
+          description: Room id to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '400':
+          description: Invalid room id
+      security:
+        - booking_auth:
+            - admin
+
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        username:
+          type: string
+          example: theUser
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: James
+        email:
+          type: string
+          example: john@email.com
+        password:
+          type: string
+          example: '12345'
+        phone:
+          type: string
+          example: '12345'
+        userStatus:
+          type: integer
+          description: User Status
+          format: int32
+          example: 1
+      xml:
+        name: user
+
+    Room:
+      required:
+        - id
+        - name
+        - numOfSeats
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 2
+        name:
+          type: string
+          example: 'Room #5'
+        numOfSeats:
+          type: integer
+          format: int64
+          example: 22
+      xml:
+        name: room
+
+    Booking:
+      required:
+        - id
+        - room_id
+        - user_id
+        - time_start
+        - time_end
+        - num_of_people
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 2
+        room_id:
+          type: integer
+          format: int64
+          example: 2
+        user_id:
+          type: integer
+          format: int64
+          example: 2
+        num_of_people:
+          type: integer
+          format: int64
+          example: 22
+        time_start:
+          type: string
+          example: '2022-10-10 13:10:00'
+        time_end:
+          type: string
+          example: '2022-10-10 14:10:00'
+      xml:
+        name: room
+
+
+
+  requestBodies:
+    UserToCreate:
+      description: Created user object
+      required: true
+      content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: theUser
+                firstName:
+                  type: string
+                  example: John
+                lastName:
+                  type: string
+                  example: James
+                email:
+                  type: string
+                  example: john@email.com
+                password:
+                  type: string
+                  example: '12345'
+                phone:
+                  type: string
+                  example: '12345'
+                userStatus:
+                  type: integer
+                  description: User Status
+                  format: int32
+                  example: 1
+              xml:
+                name: user
+
+
+    RoomToCreate:
+      description: Create a new room
+      required: true
+      content:
+          application/json:
+            schema:
+              required:
+                - name
+                - numOfSeats
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Room #5'
+                numOfSeats:
+                  type: integer
+                  format: int64
+                  example: 22
+              xml:
+                name: room
+    RoomToBook:
+      description: Book a room
+      required: true
+      content:
+          application/json:
+            schema:
+              required:
+                - name
+                - numOfSeats
+                - time_start
+                - time_end
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Room #5'
+                numOfSeats:
+                  type: integer
+                  format: int64
+                  example: 22
+                time_start:
+                  type: string
+                  example: '2022-10-10 13:10'
+                time_end:
+                  type: string
+                  example: '2022-10-10 14:10'
+              xml:
+                name: room
+
+  securitySchemes:
+    booking_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: url
+          scopes:
+            admin : can do all actions
+            manager : can update infos about room
+            user : can book room and change infos anout booking
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
