@@ -13,6 +13,7 @@ psycopg2 = "^2.9.5"
 marshmallow = "^3.19.0"
 flask-bcrypt = "^1.0.1"
 flask-httpauth = "^4.7.0"
+pytest = "^7.2.0"
 
 
 [build-system]

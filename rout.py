@@ -83,11 +83,10 @@ def update_user(user_id):
         UserToUpdate().load(request.json)
     except ValidationError as err:
         return jsonify(err.messages), 400
-
-    users = db.session.query(Users).filter_by(username=request.json['username']).all()
-    if len(users) > 0 and users[0].id != user_id:
-        return jsonify({"message": "Username is used"}), 400
-
+    if 'username' in request.json:
+        users = db.session.query(Users).filter_by(username=request.json['username']).all()
+        if len(users) > 0 and users[0].id != user_id:
+            return jsonify({"message": "Username is used"}), 400
 
     try:
         if 'username' in request.json:
@@ -115,8 +114,6 @@ def update_user(user_id):
 @auth.login_required
 def delete_user(user_id):
     user = db.session.query(Users).filter_by(id=user_id).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     if user != auth.current_user():
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -147,8 +144,6 @@ def logout():
 @auth.login_required
 def create_room():
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     if user.user_status != 1:
         return jsonify({'error': 'Forbidden'}), 403
     try:
@@ -190,8 +185,6 @@ def get_room(room_id):
 @auth.login_required
 def delete_room(room_id):
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     if user.user_status != 1:
         return jsonify({'error': 'Forbidden'}), 403
     room = db.session.query(Rooms).filter_by(id=room_id).first()
@@ -212,8 +205,6 @@ def delete_room(room_id):
 @auth.login_required
 def update_room(room_id):
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     if user.user_status != 1 and user.user_status != 2:
         return jsonify({'error': 'Forbidden'}), 403
     try:
@@ -252,8 +243,6 @@ def update_room(room_id):
 @auth.login_required
 def create_book():
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     try:
         class RoomToBook(Schema):
             room_id = fields.Integer(required=True)
@@ -308,8 +297,6 @@ def create_book():
 @auth.login_required
 def get_book(book_id):
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     book = db.session.query(booked_room).filter_by(id=book_id).first()
     if book is None:
         return jsonify({'error': 'Book not found'}), 404
@@ -367,8 +354,6 @@ def update_book(book_id):
         return jsonify(err.messages), 400
 
     user = db.session.query(Users).filter_by(username=auth.username()).first()
-    if user is None:
-        return jsonify({'error': 'No users'}), 404
     book = db.session.query(booked_room).filter_by(id=book_id).first()
     if book is None:
         return jsonify({'error': 'No books'}), 404
@@ -377,42 +362,35 @@ def update_book(book_id):
 
     try:
         if 'room_id' in request.json:
+            seats = db.session.query(Rooms).filter_by(id=request.json['room_id']).first()
+            if seats is None:
+                return ({"message": "No rooms"}), 404
             book.room_id = request.json['room_id']
         if 'user_id' in request.json:
             book.user_id = request.json['user_id']
         if 'num_of_people' in request.json:
-            seats = db.session.query(Rooms).filter_by(id=request.json['room_id']).first()
-            if seats is None:
-                return ({"message": "No rooms"}), 404
             if request.json['num_of_people'] < 0 or request.json['num_of_people'] > seats.num_of_seats:
                 return ({"message": "Room is small for that count of people"}), 400
             book.num_of_people = request.json['num_of_people']
-        if 'time_start' in request.json:
+        if 'time_start' in request.json and 'time_end' in request.json:
             books = db.session.query(booked_room).filter_by(room_id=request.json['room_id']).all()
 
             for check in books:
-                if check.id != book_id:
-                    if check.time_start <= datetime.datetime.strptime(request.json['time_start'], '%Y-%m-%d %H:%M:%S') < check.time_end:
-                        return ({"message": "Time is booked"}), 400
-            if not 'time_end' in request.json:
-                if book.time_end - datetime.datetime.strptime(
-                        request.json['time_start'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta( days=5) or book.time_end - datetime.datetime.strptime(request.json['time_start'], '%Y-%m-%d %H:%M:%S') < datetime.timedelta(hours=1):
-                    return ({"message": "Time is too short or too big"}), 400
-            else:
-                if datetime.datetime.strptime(request.json['time_end'], '%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(request.json['time_start'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(
-                    days=5) or datetime.datetime.strptime(request.json['time_end'], '%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(request.json['time_start'],'%Y-%m-%d %H:%M:%S') < datetime.timedelta(hours=1):
-                    return ({"message": "Time is too short or too big"}), 400
+                if check.time_start <= datetime.datetime.strptime(request.json['time_start'],
+                                                                  '%Y-%m-%d %H:%M:%S') < check.time_end:
+                    return ({"message": "Time is booked"}), 400
+                if check.time_start < datetime.datetime.strptime(request.json['time_end'],
+                                                                 '%Y-%m-%d %H:%M:%S') <= check.time_end:
+                    return ({"message": "Time is booked"}), 400
+
+            if datetime.datetime.strptime(request.json['time_end'], '%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(
+                    request.json['time_start'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(
+                days=5) or datetime.datetime.strptime(
+                request.json['time_end'], '%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(request.json['time_start'],
+                                                                                            '%Y-%m-%d %H:%M:%S') < datetime.timedelta(
+                hours=1):
+                return ({"message": "Time is too short or too big"}), 400
             book.time_start = request.json['time_start']
-        if 'time_end' in request.json:
-            books = db.session.query(booked_room).filter_by(room_id=request.json['room_id']).all()
-
-            for check in books:
-                if check.id != book_id:
-                    if datetime.datetime.strptime(check.time_start, '%Y-%m-%d %H:%M:%S') < datetime.datetime.strptime(request.json['time_end'], '%Y-%m-%d %H:%M:%S') <= check.time_end:
-                        return ({"message": "Time is booked"}), 400
-            if 'time_start' in request.json:
-                if datetime.datetime.strptime(request.json['time_end'], '%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(book.time_start, '%Y-%m-%d %H:%M:%S') > datetime.timedelta(days=5) or datetime.datetime.strptime(request.json['time_end'],'%Y-%m-%d %H:%M:%S') - datetime.datetime.strptime(book.time_start, '%Y-%m-%d %H:%M:%S') < datetime.timedelta(hours=1):
-                    return ({"message": "Time is too short or too big"}), 400
             book.time_end = request.json['time_end']
     except:
         db.session.rollback()
